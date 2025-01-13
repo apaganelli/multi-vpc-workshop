@@ -1211,16 +1211,6 @@ Outputs:
     Value: !Ref VpcA
     Export:
       Name: !Sub "VpcAId"
-  VpcAPublicServerPublicIp:
-    Description: "VPC A Public EC2 Public IP address"
-    Value: !GetAtt VpcAPublicServerEc2.PublicIp
-    Export:
-      Name: !Sub "VpcAPublicServerPublicIP"
-  VpcAPublicServerPrivateIp:
-    Description: "VPC A Public EC2 Private IP address"
-    Value: !GetAtt VpcAPublicServerEc2.PrivateIp
-    Export:
-      Name: !Sub "VpcAPublicServerPrivateIP"
   VpcAPrivateServer:
     Description: "VPC A Private EC2 IP address"
     Value: !GetAtt ServerEc2VPCB.PrivateIp

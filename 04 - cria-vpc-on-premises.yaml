@@ -44,11 +44,6 @@ Parameters:
   LatestAmiIdCustomerGateway:
     Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
     Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
-  ParticipantIPAddress:
-    Type: String
-    Description: 'What is your external IP address in the format x.x.x.x/32? This entry will be added to certain Security Groups. Find your IP at https://checkip.amazonaws.com/'
-    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(32))$"
-    ConstraintDescription: must be a valid IP address of the form x.x.x.x/32.
 
 Resources:
   ## Data center resources
@@ -211,10 +206,6 @@ Resources:
           CidrIp: 192.168.0.0/16
           FromPort: "-1"
           ToPort: "-1"
-        - IpProtocol: icmp
-          CidrIp: !Ref ParticipantIPAddress
-          FromPort: "-1"
-          ToPort: "-1"          
       VpcId: !Ref OnPremVpc
 
   OnPremDnsServerSecurityGroup:
@@ -259,10 +250,6 @@ Resources:
           CidrIp: 192.168.0.0/16
           FromPort: "-1"
           ToPort: "-1"
-        - IpProtocol: icmp
-          CidrIp: !Ref ParticipantIPAddress
-          FromPort: "-1"
-          ToPort: "-1"          
       VpcId: !Ref OnPremVpc
 
   OnPremCustomerGatewayServerSecurityGroup:
@@ -283,10 +270,6 @@ Resources:
           CidrIp: 192.168.0.0/16
           FromPort: "-1"
           ToPort: "-1"
-        - IpProtocol: icmp
-          CidrIp: !Ref ParticipantIPAddress
-          FromPort: "-1"
-          ToPort: "-1"          
       VpcId: !Ref OnPremVpc
 
   OnPremDhcpOptions:

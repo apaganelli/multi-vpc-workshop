@@ -289,6 +289,32 @@ Resources:
           FromPort: "-1"
           ToPort: "-1"
 
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: "NetworkingWorkshopEC2Role"
+      Path: "/"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: "NetworkingWorkshopInstanceProfile"
+      Path: "/"
+      Roles:
+        - !Ref EC2Role
+        
   VpcAPublicServerEc2:
     Type: AWS::EC2::Instance
     DependsOn: 
@@ -326,30 +352,30 @@ Resources:
         - Key: Name
           Value: "VPC A Private AZ1 Server"
 
-  # VPC A Endpoints
-  EndpointS3:
-    Type: AWS::EC2::VPCEndpoint
-    DependsOn: VpcAPrivateSubnetRouteTable
-    Properties:
-      RouteTableIds:
-        - !Ref VpcAPrivateSubnetRouteTable
-      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
-      VpcEndpointType: 'Gateway'
-      VpcId: !Ref VpcA
+  # # VPC A Endpoints
+  # EndpointS3:
+  #   Type: AWS::EC2::VPCEndpoint
+  #   DependsOn: VpcAPrivateSubnetRouteTable
+  #   Properties:
+  #     RouteTableIds:
+  #       - !Ref VpcAPrivateSubnetRouteTable
+  #     ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
+  #     VpcEndpointType: 'Gateway'
+  #     VpcId: !Ref VpcA
 
-  EndpointKMS:
-    Type: AWS::EC2::VPCEndpoint
-    DependsOn: 
-      - VpcAPrivateSubnet1
-      - VpcAPrivateSubnet2
-    Properties: 
-      PrivateDnsEnabled: True
-      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.kms'
-      SubnetIds: 
-        - !Ref VpcAPrivateSubnet1
-        - !Ref VpcAPrivateSubnet2
-      VpcEndpointType: 'Interface'
-      VpcId: !Ref VpcA
+  # EndpointKMS:
+  #   Type: AWS::EC2::VPCEndpoint
+  #   DependsOn: 
+  #     - VpcAPrivateSubnet1
+  #     - VpcAPrivateSubnet2
+  #   Properties: 
+  #     PrivateDnsEnabled: True
+  #     ServiceName: !Sub 'com.amazonaws.${AWS::Region}.kms'
+  #     SubnetIds: 
+  #       - !Ref VpcAPrivateSubnet1
+  #       - !Ref VpcAPrivateSubnet2
+  #     VpcEndpointType: 'Interface'
+  #     VpcId: !Ref VpcA
 
   # VPC B Resources
   VPCB:

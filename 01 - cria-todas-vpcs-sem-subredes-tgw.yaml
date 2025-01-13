@@ -239,34 +239,34 @@ Resources:
       RouteTableId: !Ref VpcAPublicSubnetRouteTable
 
   VpcANatEip:
-    Type: "AWS::EC2::EIP"
-    Properties:
-      Domain: vpc
+   Type: AWS::EC2::EIP
+   Properties:
+     Domain: vpc
 
   VpcANatGateway:
-    Type: "AWS::EC2::NatGateway"
-    DependsOn: 
-      - VpcAPublicSubnet1
-      - VpcANatEip
-    Properties:
-      AllocationId:
-        Fn::GetAtt:
-          - VpcANatEip
-          - AllocationId
-      SubnetId: !Ref VpcAPublicSubnet1
-      Tags:
-        - Key: Name
-          Value: "VPC A NATGW"
+   Type: "AWS::EC2::NatGateway"
+   DependsOn: 
+     - VpcAPublicSubnet1
+     - VpcANatEip
+   Properties:
+     AllocationId:
+       Fn::GetAtt:
+         - VpcANatEip
+         - AllocationId
+     SubnetId: !Ref VpcAPublicSubnet1
+     Tags:
+       - Key: Name
+         Value: "VPC A NATGW"
 
   VpcANatInternetRoutePrivate:
-    Type: AWS::EC2::Route
-    DependsOn: 
-      - VpcANatGateway
-      - VpcAPrivateSubnetRouteTable
-    Properties:
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref VpcANatGateway
-      RouteTableId: !Ref VpcAPrivateSubnetRouteTable
+   Type: AWS::EC2::Route
+   DependsOn: 
+     - VpcANatGateway
+     - VpcAPrivateSubnetRouteTable
+   Properties:
+     DestinationCidrBlock: 0.0.0.0/0
+     NatGatewayId: !Ref VpcANatGateway
+     RouteTableId: !Ref VpcAPrivateSubnetRouteTable
 
   VpcAEc2SecGroup:
     Type: AWS::EC2::SecurityGroup
@@ -288,26 +288,60 @@ Resources:
           CidrIp: !Ref ParticipantIPAddress
           FromPort: "-1"
           ToPort: "-1"
-
-  VpcAPublicServerEc2:
-    Type: AWS::EC2::Instance
-    DependsOn: 
-      - VpcAEc2SecGroup
-      - VpcAPublicSubnet2
+          
+  EC2Role:
+    Type: AWS::IAM::Role
     Properties:
-      IamInstanceProfile: "NetworkingWorkshopInstanceProfile"
-      ImageId: !Ref AMI
-      InstanceType: t2.micro
-      NetworkInterfaces:
-        - AssociatePublicIpAddress: true
-          DeviceIndex: "0"
-          GroupSet:
-            - !Ref VpcAEc2SecGroup
-          PrivateIpAddress: 10.0.2.100
-          SubnetId: !Ref VpcAPublicSubnet2
-      Tags:
-        - Key: Name
-          Value: "VPC A Public AZ2 Server"
+      RoleName: "NetworkingWorkshopEC2Role"
+      Path: "/"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: "NetworkingWorkshopInstanceProfile"
+      Path: "/"
+      Roles:
+        - !Ref EC2Role
+
+  FlowLogsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: NetworkingWorkshopFlowLogsRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - vpc-flow-logs.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Description: Role to allow VPC Flow Logs to write to CloudWatch logs
+      Policies:
+        - PolicyName: CloudWatchLogsWrite
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: 
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                  - "logs:DescribeLogGroups"
+                  - "logs:DescribeLogStreams"
+                Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:NetworkingWorkshopFlowLogsGroup:*'
 
   VpcAPrivateServerEc2:
     Type: AWS::EC2::Instance
@@ -325,31 +359,8 @@ Resources:
       Tags:
         - Key: Name
           Value: "VPC A Private AZ1 Server"
-
-  # VPC A Endpoints
-  EndpointS3:
-    Type: AWS::EC2::VPCEndpoint
-    DependsOn: VpcAPrivateSubnetRouteTable
-    Properties:
-      RouteTableIds:
-        - !Ref VpcAPrivateSubnetRouteTable
-      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
-      VpcEndpointType: 'Gateway'
-      VpcId: !Ref VpcA
-
-  EndpointKMS:
-    Type: AWS::EC2::VPCEndpoint
-    DependsOn: 
-      - VpcAPrivateSubnet1
-      - VpcAPrivateSubnet2
-    Properties: 
-      PrivateDnsEnabled: True
-      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.kms'
-      SubnetIds: 
-        - !Ref VpcAPrivateSubnet1
-        - !Ref VpcAPrivateSubnet2
-      VpcEndpointType: 'Interface'
-      VpcId: !Ref VpcA
+        - Key: StopEveryDayAt
+          Value: "20:00"
 
   # VPC B Resources
   VPCB:
@@ -518,37 +529,37 @@ Resources:
         Ref: PublicSubnetRouteTableVPCB
 
   VPCBNATEIP:
-    Type: "AWS::EC2::EIP"
-    Properties:
-      Domain: vpc
+   Type: "AWS::EC2::EIP"
+   Properties:
+     Domain: vpc
 
   VPCBNATGateway:
-    DependsOn: 
-      - AttachGatewayVPCB
-      - PublicSubnet1VPCB
-    Type: "AWS::EC2::NatGateway"
-    Properties:
-      AllocationId:
-        Fn::GetAtt:
-          - VPCBNATEIP
-          - AllocationId
-      SubnetId:
-        Ref: PublicSubnet1VPCB
-      Tags:
-        - Key: Name
-          Value: "VPC B NATGW"
+   DependsOn: 
+     - AttachGatewayVPCB
+     - PublicSubnet1VPCB
+   Type: "AWS::EC2::NatGateway"
+   Properties:
+     AllocationId:
+       Fn::GetAtt:
+         - VPCBNATEIP
+         - AllocationId
+     SubnetId:
+       Ref: PublicSubnet1VPCB
+     Tags:
+       - Key: Name
+         Value: "VPC B NATGW"
 
   VPCBNATInternetRoutePrivate:
-    Type: AWS::EC2::Route
-    DependsOn:
-      - VPCBNATGateway
-      - PrivateSubnetRouteTableVPCB
-    Properties:
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId:
-        Ref: VPCBNATGateway
-      RouteTableId:
-        Ref: PrivateSubnetRouteTableVPCB
+   Type: AWS::EC2::Route
+   DependsOn:
+     - VPCBNATGateway
+     - PrivateSubnetRouteTableVPCB
+   Properties:
+     DestinationCidrBlock: 0.0.0.0/0
+     NatGatewayId:
+       Ref: VPCBNATGateway
+     RouteTableId:
+       Ref: PrivateSubnetRouteTableVPCB
 
   VPCBEc2SecGroup:
     Type: AWS::EC2::SecurityGroup
@@ -592,6 +603,8 @@ Resources:
       Tags:
         - Key: Name
           Value: "VPC B Private AZ1 Server"
+        - Key: StopEveryDayAt
+          Value: "20:00"
 
   # VPC C Resources
   VPCC:
@@ -760,37 +773,37 @@ Resources:
         Ref: PublicSubnetRouteTableVPCC
 
   VPCCNATEIP:
-    Type: "AWS::EC2::EIP"
-    Properties:
-      Domain: vpc
+   Type: "AWS::EC2::EIP"
+   Properties:
+     Domain: vpc
 
   VPCCNATGateway:
-    Type: "AWS::EC2::NatGateway"
-    DependsOn:
-      - AttachGateway
-      - PublicSubnet1VPCC
-    Properties:
-      AllocationId:
-        Fn::GetAtt:
-          - VPCCNATEIP
-          - AllocationId
-      SubnetId:
-        Ref: PublicSubnet1VPCC
-      Tags:
-        - Key: Name
-          Value: "VPC C NATGW"
+   Type: "AWS::EC2::NatGateway"
+   DependsOn:
+     - AttachGateway
+     - PublicSubnet1VPCC
+   Properties:
+     AllocationId:
+       Fn::GetAtt:
+         - VPCCNATEIP
+         - AllocationId
+     SubnetId:
+       Ref: PublicSubnet1VPCC
+     Tags:
+       - Key: Name
+         Value: "VPC C NATGW"
 
   VPCCNATInternetRoutePrivate:
-    Type: AWS::EC2::Route
-    DependsOn: 
-      - VPCCNATGateway
-      - PrivateSubnetRouteTableVPCC
-    Properties:
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId:
-        Ref: VPCCNATGateway
-      RouteTableId:
-        Ref: PrivateSubnetRouteTableVPCC
+   Type: AWS::EC2::Route
+   DependsOn: 
+     - VPCCNATGateway
+     - PrivateSubnetRouteTableVPCC
+   Properties:
+     DestinationCidrBlock: 0.0.0.0/0
+     NatGatewayId:
+       Ref: VPCCNATGateway
+     RouteTableId:
+       Ref: PrivateSubnetRouteTableVPCC
 
   VPCCEc2SecGroup:
     Type: AWS::EC2::SecurityGroup
@@ -831,6 +844,8 @@ Resources:
       Tags:
         - Key: Name
           Value: "VPC C Private AZ1 Server"
+        - Key: StopEveryDayAt
+          Value: "20:00"
 
 Outputs:
   # VPC A Outputs
@@ -839,16 +854,16 @@ Outputs:
     Value: !Ref VpcA
     Export:
       Name: !Sub "VpcAId"
-  VpcAPublicServerPublicIp:
-    Description: "VPC A Public EC2 Public IP address"
-    Value: !GetAtt VpcAPublicServerEc2.PublicIp
-    Export:
-      Name: !Sub "VpcAPublicServerPublicIP"
-  VpcAPublicServerPrivateIp:
-    Description: "VPC A Public EC2 Private IP address"
-    Value: !GetAtt VpcAPublicServerEc2.PrivateIp
-    Export:
-      Name: !Sub "VpcAPublicServerPrivateIP"
+  #VpcAPublicServerPublicIp:
+  #  Description: "VPC A Public EC2 Public IP address"
+  #  Value: !GetAtt VpcAPublicServerEc2.PublicIp
+  #  Export:
+  #    Name: !Sub "VpcAPublicServerPublicIP"
+  #VpcAPublicServerPrivateIp:
+  #  Description: "VPC A Public EC2 Private IP address"
+  #  Value: !GetAtt VpcAPublicServerEc2.PrivateIp
+  #  Export:
+  #    Name: !Sub "VpcAPublicServerPrivateIP"
   VpcAPrivateServer:
     Description: "VPC A Private EC2 IP address"
     Value: !GetAtt ServerEc2VPCB.PrivateIp

@@ -23,11 +23,6 @@ Parameters:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Description: 'The ID of the AMI.'
     Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64
-  ParticipantIPAddress:
-    Type: String
-    Description: 'Qual é o seu endereçõ IP no formato x.x.x.x/32? Será utilizado no Security Groups. Encontre em https://checkip.amazonaws.com/'
-    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(32))$"
-    ConstraintDescription: deve ser um endereço IP válido no formato x.x.x.x/32.
 
 Resources:
   # VPC A Resources
@@ -284,10 +279,6 @@ Resources:
           CidrIp: 172.16.0.0/16
           FromPort: "-1"
           ToPort: "-1"
-        - IpProtocol: icmp
-          CidrIp: !Ref ParticipantIPAddress
-          FromPort: "-1"
-          ToPort: "-1"
           
   EC2Role:
     Type: AWS::IAM::Role
@@ -343,7 +334,7 @@ Resources:
                   - "logs:DescribeLogStreams"
                 Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:NetworkingWorkshopFlowLogsGroup:*'
 
-  VpcAPrivateServerEc2:
+  PrivateServerEc2VPCA:
     Type: AWS::EC2::Instance
     DependsOn: 
       - VpcAEc2SecGroup
@@ -581,12 +572,8 @@ Resources:
           FromPort: "5201"
           ToPort: "5201"
           CidrIp: 10.0.0.0/8
-        - IpProtocol: icmp
-          CidrIp: !Ref ParticipantIPAddress
-          FromPort: "-1"
-          ToPort: "-1"
 
-  ServerEc2VPCB:
+  PrivateServerEc2VPCB:
     Type: AWS::EC2::Instance
     DependsOn: 
       - PrivateSubnet1VPCB
@@ -822,12 +809,8 @@ Resources:
           CidrIp: 172.16.0.0/16
           FromPort: "-1"
           ToPort: "-1"
-        - IpProtocol: icmp
-          CidrIp: !Ref ParticipantIPAddress
-          FromPort: "-1"
-          ToPort: "-1"
 
-  ServerEc2VPCC:
+  PrivateServerEc2VPCC:
     Type: AWS::EC2::Instance
     DependsOn: 
       - PrivateSubnet1VPCC
@@ -854,19 +837,9 @@ Outputs:
     Value: !Ref VpcA
     Export:
       Name: !Sub "VpcAId"
-  #VpcAPublicServerPublicIp:
-  #  Description: "VPC A Public EC2 Public IP address"
-  #  Value: !GetAtt VpcAPublicServerEc2.PublicIp
-  #  Export:
-  #    Name: !Sub "VpcAPublicServerPublicIP"
-  #VpcAPublicServerPrivateIp:
-  #  Description: "VPC A Public EC2 Private IP address"
-  #  Value: !GetAtt VpcAPublicServerEc2.PrivateIp
-  #  Export:
-  #    Name: !Sub "VpcAPublicServerPrivateIP"
   VpcAPrivateServer:
     Description: "VPC A Private EC2 IP address"
-    Value: !GetAtt ServerEc2VPCB.PrivateIp
+    Value: !GetAtt PrivateServerEc2VPCA.PrivateIp
     Export:
       Name: !Sub "VpcAServerIP"
   VpcAPublicSubnet1:
@@ -908,7 +881,7 @@ Outputs:
       Name: !Sub "VPCB-${AWS::StackName}-VPC"
   ServerVPCB:
     Description: "VPCB1 EC2 IP address"
-    Value: !GetAtt ServerEc2VPCB.PrivateIp
+    Value: !GetAtt PrivateServerEc2VPCB.PrivateIp
     Export:
       Name: !Sub "VPCB-${AWS::StackName}-ServerIP"
   PublicSubnet1VPCB:
@@ -949,7 +922,7 @@ Outputs:
       Name: !Sub "VPCC-${AWS::StackName}-VPC"
   ServerVPCC:
     Description: "VPCC EC2 IP address"
-    Value: !GetAtt ServerEc2VPCC.PrivateIp
+    Value: !GetAtt PrivateServerEc2VPCC.PrivateIp
     Export:
       Name: !Sub "VPCC-${AWS::StackName}-ServerIP"
   PublicSubnet1VPCC:

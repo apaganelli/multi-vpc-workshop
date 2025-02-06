@@ -334,6 +334,8 @@ Resources:
       Tags:
         - Key: Name
           Value: "VPC A Public AZ2 Server"
+        - Key: TerminatedByLambda
+          Value: "true"
 
   VpcAPrivateServerEc2:
     Type: AWS::EC2::Instance
